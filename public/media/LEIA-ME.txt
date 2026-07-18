@@ -1,0 +1,21 @@
+Coloque aqui dentro os seus arquivos, por exemplo:
+
+  public/media/instalacao.mp4
+  public/media/boas-vindas.mp3
+
+A Vercel serve qualquer coisa que esteja em `public/` como arquivo estático. Depois do deploy,
+a URL pública vai ser:
+
+  https://SEU-PROJETO.vercel.app/media/instalacao.mp4
+  https://SEU-PROJETO.vercel.app/media/boas-vindas.mp3
+
+É exatamente essa URL que você cola nos campos "URL pública do vídeo" e "URL pública do áudio"
+dentro do painel.
+
+Atenção ao tamanho do arquivo:
+- O GitHub recusa arquivos maiores que 100MB por padrão.
+- Se o seu vídeo for grande, comprima antes (ex: HandBrake, ou exportar em qualidade menor).
+  Pra um vídeo tutorial curto, algo entre 10-30MB já costuma ficar com boa qualidade.
+- Se mesmo comprimido continuar grande, hospede em outro lugar com link direto público
+  (ex: Cloudinary, Bunny.net, um bucket S3/R2) e cole essa URL externa no painel —
+  não precisa estar necessariamente dentro deste repositório.

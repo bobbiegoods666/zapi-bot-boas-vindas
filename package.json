@@ -1,0 +1,9 @@
+{
+  "name": "zapi-bot-boas-vindas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel + webhook para disparo automático de boas-vindas (2 textos, 1 video, 1 audio) via Z-API",
+  "dependencies": {
+    "@upstash/redis": "^1.34.0"
+  }
+}

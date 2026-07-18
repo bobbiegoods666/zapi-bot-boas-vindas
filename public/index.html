@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — Bot de Boas-vindas WhatsApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green-deep:#1F3D2B; --green-mid:#2E5A3E; --parchment:#EFE7D8;
+    --parchment-soft:#F7F2E7; --soil:#3D2717; --gold:#C89B3C; --ember:#C6551D;
+    --line:rgba(61,39,23,0.16); --ok:#2E7D46; --err:#B23A2E;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--parchment-soft);color:var(--soil);font-family:'Work Sans',sans-serif;padding:40px 20px;}
+  .wrap{max-width:720px;margin:0 auto;}
+  h1{font-family:'Fraunces',serif;font-size:28px;color:var(--green-deep);margin-bottom:6px;}
+  .sub{opacity:0.7;font-size:14.5px;margin-bottom:32px;}
+  .card{background:var(--parchment);border:1px solid var(--line);border-radius:6px;padding:28px;margin-bottom:20px;}
+  .card h2{font-family:'Fraunces',serif;font-size:17px;color:var(--green-deep);margin:0 0 16px;}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .hint{font-size:12.5px;opacity:0.65;margin:-2px 0 10px;}
+  input,textarea{
+    width:100%;border:1.5px solid var(--line);background:var(--parchment-soft);
+    padding:11px 13px;font-family:'Work Sans',sans-serif;font-size:14.5px;border-radius:4px;
+    color:var(--soil);margin-bottom:16px;
+  }
+  textarea{resize:vertical;min-height:70px;}
+  input:focus,textarea:focus{outline:none;border-color:var(--green-mid);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  button{
+    background:var(--green-deep);color:var(--parchment-soft);border:none;
+    padding:13px 24px;border-radius:4px;font-size:14.5px;font-weight:600;cursor:pointer;
+    margin-right:10px;
+  }
+  button:hover{background:var(--green-mid);}
+  button:disabled{opacity:0.5;cursor:not-allowed;}
+  button.secondary{background:transparent;border:1.5px solid var(--soil);color:var(--soil);}
+  button.secondary:hover{background:var(--soil);color:var(--parchment-soft);}
+  button.danger{background:transparent;border:1.5px solid var(--err);color:var(--err);}
+  button.danger:hover{background:var(--err);color:var(--parchment-soft);}
+  .status{font-size:13.5px;margin-top:12px;font-weight:600;}
+  .status.ok{color:var(--ok);}
+  .status.err{color:var(--err);}
+  .webhook-box{
+    background:var(--green-deep);color:var(--parchment-soft);padding:16px 18px;
+    border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  .webhook-box button{background:var(--gold);color:var(--soil);padding:8px 14px;font-size:13px;margin:0;}
+  #locked, #setup{max-width:420px;margin:80px auto;}
+  .badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12.5px;font-weight:600;}
+  .badge.conectado{background:rgba(46,125,70,0.15);color:var(--ok);}
+  .badge.desconectado{background:rgba(178,58,46,0.15);color:var(--err);}
+</style>
+</head>
+<body>
+
+<div id="setup" class="wrap" style="display:none;">
+  <div class="card">
+    <h2>Primeiro acesso — crie a senha do painel</h2>
+    <p class="hint">Essa é a única vez que você faz isso. A partir de agora, use essa senha pra entrar (e pode trocá-la depois, dentro do painel).</p>
+    <label for="novaSenhaSetup">Escolha uma senha</label>
+    <input id="novaSenhaSetup" type="password" placeholder="Pelo menos 4 caracteres">
+    <button onclick="criarSenha()">Criar senha e entrar</button>
+    <div id="setupStatus" class="status"></div>
+  </div>
+</div>
+
+<div id="locked" class="wrap">
+  <div class="card">
+    <h2>Senha do painel</h2>
+    <label for="pwd">Senha</label>
+    <input id="pwd" type="password" placeholder="Digite a senha do painel">
+    <button onclick="entrar()">Entrar</button>
+    <div id="lockStatus" class="status"></div>
+  </div>
+</div>
+
+<div id="painel" class="wrap" style="display:none;">
+  <h1>Bot de boas-vindas</h1>
+  <p class="sub">Configure a sequência que é enviada assim que um lead do Meta Ads manda a primeira mensagem no WhatsApp.</p>
+
+  <div class="card">
+    <h2>Webhook — cole isso no painel do Z-API</h2>
+    <div class="webhook-box">
+      <span id="webhookUrl"></span>
+      <button onclick="copiarWebhook()">Copiar</button>
+    </div>
+    <p class="hint" style="margin-top:12px;">No Z-API: Painel → sua instância → Webhooks → "Ao receber" (on-message-received) → cole essa URL.</p>
+  </div>
+
+  <div class="card">
+    <h2>Credenciais Z-API</h2>
+    <div class="row2">
+      <div>
+        <label>Instance ID</label>
+        <input id="zapiInstance" class="mono" placeholder="ID da instância">
+      </div>
+      <div>
+        <label>Token</label>
+        <input id="zapiToken" class="mono" placeholder="Token da instância">
+      </div>
+    </div>
+    <label>Client-Token (Segurança da conta, em "Segurança")</label>
+    <input id="zapiClientToken" class="mono" placeholder="Client-Token">
+
+    <button class="secondary" onclick="verificarConexao()">Verificar conexão do WhatsApp</button>
+    <span id="statusBadge"></span>
+    <div id="statusMsg" class="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Mensagens da sequência</h2>
+    <label>Texto 1 (primeira mensagem)</label>
+    <textarea id="texto1" placeholder="Ex: Olá! Que bom te ver por aqui 👋"></textarea>
+    <label>Texto 2</label>
+    <textarea id="texto2" placeholder="Ex: Vou te mostrar rapidinho como instalar o app..."></textarea>
+    <label>URL pública do vídeo (mp4)</label>
+    <input id="videoUrl" class="mono" placeholder="https://.../instalacao.mp4">
+    <p class="hint">Suba o arquivo em public/media/ no seu repositório e use a URL que a Vercel gera, ou cole um link externo já público.</p>
+    <label>URL pública do áudio (mp3/ogg)</label>
+    <input id="audioUrl" class="mono" placeholder="https://.../audio.mp3">
+  </div>
+
+  <div class="card">
+    <h2>Delay entre mensagens</h2>
+    <div class="row2">
+      <div>
+        <label>Antes de começar (segundos)</label>
+        <input id="delayInicial" type="number" min="0" value="2">
+      </div>
+      <div>
+        <label>Entre cada mensagem (segundos)</label>
+        <input id="delayEntreMensagens" type="number" min="0" value="4">
+      </div>
+    </div>
+    <p class="hint">Total da sequência: delay inicial + 3x delay entre mensagens (2 textos + video + audio).</p>
+  </div>
+
+  <div class="card">
+    <h2>Trocar senha do painel</h2>
+    <label>Nova senha (deixe em branco pra manter a atual)</label>
+    <input id="novaSenha" type="password" placeholder="Pelo menos 4 caracteres">
+  </div>
+
+  <button onclick="salvar()">Salvar configuração</button>
+  <div id="saveStatus" class="status"></div>
+
+  <div class="card">
+    <h2>Testar a sequência</h2>
+    <p class="hint">Manda a sequência completa (com os delays de verdade) pra um número seu, sem precisar rodar um anúncio. Pode repetir quantas vezes quiser — o teste não marca o número como "já atendido".</p>
+    <label>Número (com DDI + DDD, só números)</label>
+    <input id="testPhone" class="mono" placeholder="5516999999999">
+    <button onclick="testar()" id="testBtn">Enviar teste agora</button>
+    <div id="testStatus" class="status"></div>
+    <div id="testLog" class="mono" style="margin-top:14px;font-size:12.5px;white-space:pre-wrap;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Contatos já atendidos</h2>
+    <p class="hint">Cada número só recebe a sequência de boas-vindas uma vez a cada 30 dias. Se quiser testar de novo com um número que já recebeu, limpe a lista abaixo (isso não afeta o funcionamento normal com leads novos).</p>
+    <button class="danger" onclick="limparContatos()">Limpar lista de contatos atendidos</button>
+    <div id="resetStatus" class="status"></div>
+  </div>
+</div>
+
+<script>
+  let senhaAtual = '';
+
+  async function iniciar(){
+    try{
+      const r = await fetch('/api/setup');
+      const data = await r.json();
+      if(data.needsSetup){
+        document.getElementById('setup').style.display = 'block';
+        document.getElementById('locked').style.display = 'none';
+      } else {
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('locked').style.display = 'block';
+      }
+    }catch(e){
+      document.getElementById('locked').style.display = 'block';
+    }
+  }
+
+  async function criarSenha(){
+    const senha = document.getElementById('novaSenhaSetup').value;
+    const st = document.getElementById('setupStatus');
+    if(!senha || senha.length < 4){
+      st.textContent = 'Escolha uma senha com pelo menos 4 caracteres.'; st.className = 'status err';
+      return;
+    }
+    st.textContent = 'Criando...'; st.className = 'status';
+    try{
+      const r = await fetch('/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha })
+      });
+      const data = await r.json();
+      if(r.ok){
+        senhaAtual = senha;
+        await carregar();
+      } else {
+        st.textContent = data.error || 'Erro ao criar senha.'; st.className = 'status err';
+      }
+    }catch(e){
+      st.textContent = 'Erro ao conectar.'; st.className = 'status err';
+    }
+  }
+
+  function entrar(){
+    senhaAtual = document.getElementById('pwd').value;
+    if(!senhaAtual){ return; }
+    carregar();
+  }
+
+  async function carregar(){
+    const st = document.getElementById('lockStatus');
+    st.textContent = 'Verificando...'; st.className = 'status';
+    try{
+      const r = await fetch('/api/config', { headers: { 'x-panel-password': senhaAtual } });
+      if(r.status === 401){
+        st.textContent = 'Senha incorreta.'; st.className = 'status err';
+        return;
+      }
+      const cfg = await r.json();
+      document.getElementById('zapiInstance').value = cfg.zapiInstance || '';
+      document.getElementById('zapiToken').value = cfg.zapiToken || '';
+      document.getElementById('zapiClientToken').value = cfg.zapiClientToken || '';
+      document.getElementById('texto1').value = cfg.texto1 || '';
+      document.getElementById('texto2').value = cfg.texto2 || '';
+      document.getElementById('videoUrl').value = cfg.videoUrl || '';
+      document.getElementById('audioUrl').value = cfg.audioUrl || '';
+      document.getElementById('delayInicial').value = cfg.delayInicial ?? 2;
+      document.getElementById('delayEntreMensagens').value = cfg.delayEntreMensagens ?? 4;
+      document.getElementById('webhookUrl').textContent = window.location.origin + '/api/webhook';
+
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('locked').style.display = 'none';
+      document.getElementById('painel').style.display = 'block';
+    }catch(e){
+      st.textContent = 'Erro ao conectar. Tente de novo.'; st.className = 'status err';
+    }
+  }
+
+  async function salvar(){
+    const body = {
+      zapiInstance: document.getElementById('zapiInstance').value.trim(),
+      zapiToken: document.getElementById('zapiToken').value.trim(),
+      zapiClientToken: document.getElementById('zapiClientToken').value.trim(),
+      texto1: document.getElementById('texto1').value,
+      texto2: document.getElementById('texto2').value,
+      videoUrl: document.getElementById('videoUrl').value.trim(),
+      audioUrl: document.getElementById('audioUrl').value.trim(),
+      delayInicial: document.getElementById('delayInicial').value,
+      delayEntreMensagens: document.getElementById('delayEntreMensagens').value,
+      novaSenha: document.getElementById('novaSenha').value.trim(),
+    };
+    const st = document.getElementById('saveStatus');
+    st.textContent = 'Salvando...'; st.className = 'status';
+    try{
+      const r = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-panel-password': senhaAtual },
+        body: JSON.stringify(body)
+      });
+      if(r.ok){
+        st.textContent = 'Configuração salva ✓'; st.className = 'status ok';
+        if(body.novaSenha){
+          senhaAtual = body.novaSenha;
+          document.getElementById('novaSenha').value = '';
+          st.textContent = 'Configuração salva e senha atualizada ✓';
+        }
+      } else {
+        st.textContent = 'Erro ao salvar.'; st.className = 'status err';
+      }
+    }catch(e){
+      st.textContent = 'Erro ao salvar.'; st.className = 'status err';
+    }
+  }
+
+  async function verificarConexao(){
+    const badge = document.getElementById('statusBadge');
+    const msg = document.getElementById('statusMsg');
+    badge.textContent = ''; msg.textContent = 'Consultando...'; msg.className = 'status';
+    try{
+      const r = await fetch('/api/status', { headers: { 'x-panel-password': senhaAtual } });
+      const data = await r.json();
+      if(!r.ok){
+        msg.textContent = data.error || 'Erro ao consultar.'; msg.className = 'status err';
+        return;
+      }
+      if(data.connected){
+        badge.innerHTML = '<span class="badge conectado">Conectado</span>';
+        msg.textContent = '';
+      } else {
+        badge.innerHTML = '<span class="badge desconectado">Desconectado</span>';
+        msg.textContent = (data.error || 'WhatsApp desconectado — escaneie o QR code de novo no painel do Z-API.');
+        msg.className = 'status err';
+      }
+    }catch(e){
+      msg.textContent = 'Erro ao consultar o status.'; msg.className = 'status err';
+    }
+  }
+
+  async function testar(){
+    const phone = document.getElementById('testPhone').value.trim();
+    const st = document.getElementById('testStatus');
+    const logEl = document.getElementById('testLog');
+    const btn = document.getElementById('testBtn');
+    logEl.textContent = '';
+    if(!phone){
+      st.textContent = 'Informe um número.'; st.className = 'status err';
+      return;
+    }
+    btn.disabled = true;
+    st.textContent = 'Enviando... (respeita os delays configurados, pode levar alguns segundos)';
+    st.className = 'status';
+    try{
+      const r = await fetch('/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-panel-password': senhaAtual },
+        body: JSON.stringify({ phone })
+      });
+      const data = await r.json();
+      if(r.ok){
+        st.textContent = 'Sequência enviada — confira o WhatsApp desse número.'; st.className = 'status ok';
+        logEl.textContent = (data.log || []).map(item =>
+          `${item.etapa}: ${item.ok ? 'OK' : 'FALHOU (' + (item.status || '') + ')'}`
+        ).join('\n');
+      } else {
+        st.textContent = data.error || 'Erro ao testar.'; st.className = 'status err';
+      }
+    }catch(e){
+      st.textContent = 'Erro ao conectar com o servidor.'; st.className = 'status err';
+    }
+    btn.disabled = false;
+  }
+
+  async function limparContatos(){
+    const st = document.getElementById('resetStatus');
+    st.textContent = 'Limpando...'; st.className = 'status';
+    try{
+      const r = await fetch('/api/reset-contatos', {
+        method: 'POST',
+        headers: { 'x-panel-password': senhaAtual }
+      });
+      const data = await r.json();
+      if(r.ok){
+        st.textContent = `Lista limpa — ${data.removidos} contato(s) removido(s).`; st.className = 'status ok';
+      } else {
+        st.textContent = data.error || 'Erro ao limpar.'; st.className = 'status err';
+      }
+    }catch(e){
+      st.textContent = 'Erro ao conectar.'; st.className = 'status err';
+    }
+  }
+
+  function copiarWebhook(){
+    const text = document.getElementById('webhookUrl').textContent;
+    navigator.clipboard.writeText(text);
+  }
+
+  document.getElementById('pwd').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') entrar();
+  });
+  document.getElementById('novaSenhaSetup').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') criarSenha();
+  });
+
+  iniciar();
+</script>
+</body>
+</html>
