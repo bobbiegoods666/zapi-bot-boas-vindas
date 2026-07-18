@@ -1,6 +1,9 @@
 const { redis, CONFIG_KEY, PASSWORD_KEY, defaultConfig } = require('./_redis');
 const { checkAuth } = require('./_auth');
 
+const CAMPOS_TEXTO = ['zapiInstance', 'zapiToken', 'zapiClientToken', 'texto1', 'texto2', 'videoUrl', 'audioUrl'];
+const CAMPOS_NUMERO = ['delayInicial', 'delayEntreMensagens'];
+
 module.exports = async (req, res) => {
   if (!(await checkAuth(req))) {
     return res.status(401).json({ error: 'senha invalida' });
@@ -12,26 +15,30 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
+    const atual = (await redis.get(CONFIG_KEY)) || defaultConfig();
     const body = req.body || {};
-    const config = {
-      zapiInstance: String(body.zapiInstance || ''),
-      zapiToken: String(body.zapiToken || ''),
-      zapiClientToken: String(body.zapiClientToken || ''),
-      texto1: String(body.texto1 || ''),
-      texto2: String(body.texto2 || ''),
-      videoUrl: String(body.videoUrl || ''),
-      audioUrl: String(body.audioUrl || ''),
-      delayInicial: Number(body.delayInicial) || 0,
-      delayEntreMensagens: Number(body.delayEntreMensagens) || 0,
-    };
-    await redis.set(CONFIG_KEY, config);
+    const novo = { ...atual };
 
-    // troca de senha do painel (opcional, so aplica se o campo vier preenchido)
+    // so atualiza os campos que vieram no corpo da requisicao -- assim cada
+    // botao de "salvar" de cada secao do painel nao apaga as outras secoes
+    for (const campo of CAMPOS_TEXTO) {
+      if (Object.prototype.hasOwnProperty.call(body, campo)) {
+        novo[campo] = String(body[campo] ?? '');
+      }
+    }
+    for (const campo of CAMPOS_NUMERO) {
+      if (Object.prototype.hasOwnProperty.call(body, campo)) {
+        novo[campo] = Number(body[campo]) || 0;
+      }
+    }
+
+    await redis.set(CONFIG_KEY, novo);
+
     if (body.novaSenha && String(body.novaSenha).length >= 4) {
       await redis.set(PASSWORD_KEY, String(body.novaSenha));
     }
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, config: novo });
   }
 
   return res.status(405).json({ error: 'metodo nao permitido' });
