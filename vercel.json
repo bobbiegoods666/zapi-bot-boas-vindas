@@ -5,6 +5,7 @@
     "api/config.js": { "maxDuration": 10 },
     "api/setup.js": { "maxDuration": 10 },
     "api/status.js": { "maxDuration": 10 },
-    "api/reset-contatos.js": { "maxDuration": 10 }
+    "api/reset-contatos.js": { "maxDuration": 10 },
+    "api/upload.js": { "maxDuration": 30 }
   }
 }

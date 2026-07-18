@@ -4,6 +4,7 @@
   "private": true,
   "description": "Painel + webhook para disparo automático de boas-vindas (2 textos, 1 video, 1 audio) via Z-API",
   "dependencies": {
-    "@upstash/redis": "^1.34.0"
+    "@upstash/redis": "^1.34.0",
+    "@vercel/blob": "^2.6.1"
   }
 }

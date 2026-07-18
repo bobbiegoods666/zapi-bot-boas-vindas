@@ -29,16 +29,19 @@ Tudo é configurado por um painel visual — inclusive a senha do painel e as cr
 
 (Alternativa: dentro da própria Vercel, em Storage → Marketplace Database Providers → Upstash, você cria e conecta direto, sem sair da Vercel.)
 
+## Passo 2.5 — Vercel Blob (para os botões de upload de vídeo/áudio funcionarem)
+
+1. No projeto na Vercel, vá na aba **Storage** → **Create Database** (ou Browse Marketplace) → escolha **Blob**.
+2. Dê um nome (ex: `zapi-bot-media`) e crie.
+3. Confirme que está conectado ao projeto (se pedir, clique em **Connect Project**).
+
+Isso injeta automaticamente a variável `BLOB_READ_WRITE_TOKEN`, que é o que os botões "Enviar vídeo" e "Enviar áudio" do painel usam para subir o arquivo direto pro armazenamento, sem precisar mexer em URL manualmente.
+
 ## Passo 3 — Vídeo e áudio
 
-Coloque seus arquivos dentro de `public/media/`, por exemplo:
+Dentro do painel, nas seções **"3. Vídeo"** e **"4. Áudio"**, escolha o arquivo e clique em **"Enviar vídeo"** / **"Enviar áudio"**. O upload vai direto do seu navegador pro Vercel Blob (não passa pelo limite de tamanho da função), e a URL gerada já preenche o campo automaticamente — só falta clicar em **"Salvar vídeo"** / **"Salvar áudio"** pra confirmar.
 
-```
-public/media/instalacao.mp4
-public/media/boas-vindas.mp3
-```
-
-Depois do deploy, a URL pública fica automaticamente `https://SEU-PROJETO.vercel.app/media/instalacao.mp4` — é essa URL que você cola no painel. O GitHub recusa arquivos acima de 100MB; se o vídeo for grande, comprima antes.
+Se preferir, também dá pra colar manualmente uma URL pública já existente (de outro lugar) no mesmo campo, sem precisar usar o botão de upload.
 
 ## Passo 4 — Subir no GitHub
 
@@ -84,8 +87,10 @@ Depois, rode uma campanha de teste no Meta Ads (clique-para-WhatsApp), clique no
 
 ## Outras funções do painel
 
+- **Um botão de salvar por seção** — credenciais Z-API, mensagens, vídeo, áudio, delays e senha são salvos separadamente, sem risco de uma seção sobrescrever a outra.
+- **Status da conexão Z-API sempre visível** — aparece um selo (Conectado / Desconectado) ao lado do título da seção de credenciais, atualizado automaticamente ao entrar no painel e sempre que você clica em "Verificar conexão do WhatsApp".
+- **Upload de vídeo e áudio direto do painel** — usa o Vercel Blob por trás; não precisa mais subir arquivo manualmente no GitHub.
 - **Trocar senha do painel** — direto no card de configuração, sem precisar mexer em nada na Vercel.
-- **Verificar conexão do WhatsApp** — mostra se a instância está conectada ou se caiu (precisa escanear o QR code de novo no Z-API).
 - **Limpar lista de contatos atendidos** — cada número só recebe a sequência uma vez a cada 30 dias; use esse botão se quiser testar de novo com um número que já recebeu.
 
 ## Custos reais
